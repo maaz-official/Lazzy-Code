@@ -5,6 +5,34 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0 0px;
+  }
+  
+  [data-theme="light"] {
+    --bg-color: #ffffff;
+    --text-color: #333333;
+    --heading-color: #444444;
+  }
+  
+  /* Dark mode styles */
+  [data-theme="dark"] {
+    --bg-color: #333333;
+    --text-color: #ffffff;
+    --heading-color: #dddddd;
+  }
+  
+  body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+  }
+  
+  h1 {
+    color: var(--heading-color);
+  }
+
 @layer components {
     * {
         @apply m-0 p-0 box-border text-base outline-purple/30 duration-100;
