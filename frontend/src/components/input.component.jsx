@@ -17,11 +17,11 @@ export default function InputBox({ type, placeholder, value, onChange, id, name,
         className={`input-box ${theme === "dark" ? "dark:bg-gray-700 dark:text-white" : "bg-gray-200 text-black"}`}
       />
 
-      {icon && <i className={`fi ${icon} input-icon ${theme === "dark" ? "text-gray-300" : "text-gray-500"}`}></i>}
+      {icon && <i className={`fi ${icon} input-icon ${theme === "dark" ? "text-black" : "text-gray-500"}`}></i>}
 
       {type === "password" && (
         <i
-          className={`fi ${showPassword ? 'fi-rr-eye' : 'fi-rr-eye-crossed'} absolute top-1/2 right-4 transform -translate-y-1/2 cursor-pointer ${theme === "dark" ? "text-gray-300" : "text-gray-500"}`}
+          className={`fi ${showPassword ? 'fi-rr-eye' : 'fi-rr-eye-crossed'} absolute top-1/2 right-4 transform -translate-y-1/2 cursor-pointer ${theme === "dark" ? "text-black" : "text-gray-500"}`}
           onClick={() => setShowPassword(!showPassword)}
         ></i>
       )}

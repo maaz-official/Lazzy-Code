@@ -1,107 +1,311 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState, useContext } from "react";
+import { Link, useNavigate, Navigate } from "react-router-dom"; // Ensure Navigate is imported
+import { Box, Button, Typography } from "@mui/material";
 import InputBox from "../components/input.component";
+import "./styles/background-animation.css"; // Ensure this CSS file exists
 import { useTheme } from "../themecontext";
-import './styles/background-animation.css';
+import { MoonIcon, SunIcon } from "@heroicons/react/solid";
+import AnimationWrapper from "../components/page-animation";
+import { motion } from "framer-motion";
+import { toast, Toaster } from "react-hot-toast";
+import api from "../api/api.js";
+import { UserAuthContext } from "../App"; // Import UserAuthContext
 
 export default function UserAuthForm({ type }) {
-  const backgroundRef = useRef(null);
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+  });
+  const [loading, setLoading] = useState(false);
+
   const { theme, toggleTheme } = useTheme();
+  const { userAuth, setUserAuth } = useContext(UserAuthContext); // Get userAuth and setUserAuth from context
+  const navigate = useNavigate(); // Use useNavigate for navigation
+
+  const toggleMode = () => {
+    toggleTheme();
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   useEffect(() => {
-    const handleMouseMove = (event) => {
-      const { clientX, clientY } = event;
-      const wave = document.createElement('div');
-      wave.className = 'cursor-wave';
-      wave.style.left = `${clientX - 25}px`;
-      wave.style.top = `${clientY - 25}px`;
-      document.body.appendChild(wave);
+    const handleBodyClick = (event) => {
+      const body = document.querySelector("body");
+      const spark = document.createElement("div");
+      spark.classList.add("spark");
+      body.appendChild(spark);
+
+      spark.style.top = `${event.clientY - body.offsetTop}px`;
+      spark.style.left = `${event.clientX - body.offsetLeft}px`;
+      spark.style.filter = `hue-rotate(${Math.random() * 360}deg)`;
+
+      for (let i = 0; i < 7; i++) {
+        const span = document.createElement("span");
+        span.style.transform = `rotate(${i * 45}deg)`;
+        spark.appendChild(span);
+      }
 
       setTimeout(() => {
-        wave.remove();
+        spark.remove();
       }, 1000);
     };
 
-    const createStar = () => {
-      const star = document.createElement('div');
-      star.className = 'star';
-      star.style.top = `${Math.random() * 100}%`;
-      star.style.left = `${Math.random() * 100}%`;
-      backgroundRef.current.appendChild(star);
-
-      setTimeout(() => {
-        star.remove();
-      }, 5000);
-    };
-
-    const createShootingStar = () => {
-      const shootingStar = document.createElement('div');
-      shootingStar.className = 'shooting-star';
-      shootingStar.style.top = `${Math.random() * 100}%`;
-      shootingStar.style.left = `${Math.random() * 100}%`;
-      backgroundRef.current.appendChild(shootingStar);
-
-      setTimeout(() => {
-        shootingStar.remove();
-      }, 2000);
-    };
-
-    for (let i = 0; i < 100; i++) {
-      createStar();
-    }
-
-    const shootingStarInterval = setInterval(createShootingStar, 3000);
-
-    window.addEventListener('mousemove', handleMouseMove);
+    document.body.addEventListener("click", handleBodyClick);
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      clearInterval(shootingStarInterval);
+      document.body.removeEventListener("click", handleBodyClick);
     };
   }, []);
 
-  return (
-    <div className={`relative h-screen overflow-hidden flex items-center justify-center ${theme === "dark" ? "dark" : ""}`}>
-      <div ref={backgroundRef} className="bg-animation starfield"></div>
-      <section className="relative z-10 h-cover items-center flex justify-center">
-        <form className={`w-[80%] max-w-[400px] p-8 rounded-md shadow-lg ${theme === "dark" ? "bg-gray-800 text-white" : "bg-white text-black"}`}>
-          <h1 className={`text-4xl font-bold capitalize text-center mb-24 ${theme === "dark" ? "text-white" : "text-black"}`}>
-            {type === "sign-in" ? "Welcome back!" : "Join us now!"}
-          </h1>
+  const authForm = useRef();
 
-          {type !== "sign-in" && (
-            <InputBox
-              type="text"
-              placeholder="Username"
-              value=""
-              onChange={() => {}}
-              id="username"
-              name="username"
-              icon="fi-rr-user"
-              theme={theme}
-            />
-          )}
-          <InputBox
-            type="text"
-            placeholder="Email"
-            value=""
-            onChange={() => {}}
-            id="email"
-            name="email"
-            icon="fi-rr-envelope"
-            theme={theme}
-          />
-          <InputBox
-            type="password"
-            placeholder="Password"
-            value=""
-            onChange={() => {}}
-            id="password"
-            name="password"
-            icon="fi-rr-lock"
-            theme={theme}
-          />
-        </form>
-      </section>
-    </div>
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    setLoading(true);
+
+    const errors = validate();
+
+    if (Object.keys(errors).length > 0) {
+      Object.values(errors).forEach((error) => {
+        toast.error(error);
+      });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await api.post(
+        type === "sign-in" ? "/api/users/signin" : "/api/users/signup",
+        formData
+      );
+
+      const { token, user } = response.data;
+
+      sessionStorage.setItem("token", token);
+      setUserAuth({ access_token: token, user }); // Set userAuth context with token and user
+      setLoading(false);
+
+      // Display success message
+      toast.success(
+        type === "sign-in"
+          ? "Sign-in successful!"
+          : "User registered successfully!"
+      );
+
+      // Redirect to home page upon successful sign-in
+      if (type === "sign-in") {
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("Error:", error.response.data.message);
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error("Failed to authenticate. Please check your credentials.");
+      }
+      setLoading(false);
+    }
+  };
+
+  const validate = () => {
+    const errors = {};
+    if (type !== "sign-in" && !formData.username) {
+      errors.username = "Username is required.";
+    }
+    if (!formData.email) {
+      errors.email = "Email is required.";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = "Email address is invalid.";
+    }
+    if (!formData.password) {
+      errors.password = "Password is required.";
+    } else if (formData.password.length < 6) {
+      errors.password = "Password must be at least 6 characters long.";
+    }
+    return errors;
+  };
+
+  if (userAuth?.access_token) {
+    return <Navigate to="/" />;
+  }
+
+  return (
+    <AnimationWrapper keyValue={type}>
+      <div
+        className={`relative h-screen overflow-hidden flex items-center justify-center ${
+          theme === "dark" ? "dark" : ""
+        } sm:mt-8 md:mt-8`}
+      >
+        <div className="flex flex-col lg:flex-row items-center justify-center w-full max-w-6xl p-4 overflow-y-auto">
+          <motion.div
+            className={`relative z-10 flex flex-col items-center justify-center ${
+              type === "sign-in" ? "w-full lg:w-1/2" : "w-full lg:w-1/3"
+            } max-w-md p-8 rounded-md shadow-lg ${
+              theme === "dark"
+                ? "bg-gray-800 text-white"
+                : "bg-white text-black"
+            } mb-4 lg:mb-0 lg:mr-4`}
+            initial={{ opacity: 0, y: -50, scale: 0.8, rotate: -20 }}
+            animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0, y: -50, scale: 0.8, rotate: 20 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Typography variant="h4" component="h1" gutterBottom>
+              Welcome to Our Blog!
+            </Typography>
+            <Typography variant="body1" gutterBottom>
+              Discover a variety of articles, stories, and insights from our
+              community. Join us to share your thoughts and experiences.
+            </Typography>
+            <Link to="/" style={{ textDecoration: "none", marginTop: "20px" }}>
+              <Button
+                variant="contained"
+                color="primary"
+                sx={{
+                  backgroundColor: "#e3f0ad",
+                  color: "#000",
+                  padding: "10px 20px",
+                  borderRadius: "999px",
+                  boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.2)",
+                  textTransform: "none",
+                  fontSize: "18px",
+                  transition: "background-color 0.3s ease",
+                  "&:hover": {
+                    backgroundColor: "#adadad",
+                    transform: "scale(1.05)",
+                  },
+                }}
+              >
+                Back to Home
+              </Button>
+            </Link>
+            <button
+              className="bg-gray-700 text-black py-1 px-2 rounded-md flex items-center space-x-2 mt-4"
+              onClick={toggleMode}
+              style={{ cursor: "pointer" }}
+            >
+              {theme === "dark" ? (
+                <SunIcon className="h-5 w-5 text-white" />
+              ) : (
+                <MoonIcon className="h-5 w-5 text-black" />
+              )}
+              <span className={theme === "dark" ? "text-white" : "text-black"}>
+                {theme === "dark" ? "Light Mode" : "Dark Mode"}
+              </span>
+            </button>
+          </motion.div>
+
+          <motion.section
+            className="relative z-10 flex items-center justify-center w-full lg:w-1/2"
+            initial={{ opacity: 0, y: -50, scale: 0.8, rotate: -20 }}
+            animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0, y: -50, scale: 0.8, rotate: 20 }}
+            transition={{ duration: 0.5 }}
+          >
+            <form
+              ref={authForm}
+              className={`w-full max-w-[500px] p-8 rounded-md shadow-lg ${
+                theme === "dark"
+                  ? "bg-gray-800 text-white"
+                  : "bg-white text-black"
+              }`}
+              onSubmit={handleSubmit}
+            >
+              <h1
+                className={`text-4xl font-bold capitalize text-center mb-6 ${
+                  theme === "dark" ? "text-white" : "text-black"
+                }`}
+              >
+                {type === "sign-in" ? "Welcome back!" : "Join us now!"}
+              </h1>
+              {type !== "sign-in" && (
+                <InputBox
+                  type="text"
+                  placeholder="Username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  id="username"
+                  name="username"
+                  icon="fi-rr-user"
+                  theme={theme}
+                />
+              )}
+
+              <InputBox
+                type="text"
+                placeholder="Email"
+                value={formData.email}
+                onChange={handleChange}
+                id="email"
+                name="email"
+                icon="fi-rr-envelope"
+                theme={theme}
+              />
+
+              <InputBox
+                type="password"
+                placeholder="Password"
+                value={formData.password}
+                onChange={handleChange}
+                id="password"
+                name="password"
+                icon="fi-rr-lock"
+                theme={theme}
+              />
+
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                fullWidth
+                className="mt-4"
+                disabled={loading}
+                sx={{
+                  backgroundColor: "#3f51b5",
+                  color: "#fff",
+                  padding: "10px 20px",
+                  borderRadius: "999px",
+                  textTransform: "none",
+                  fontSize: "18px",
+                  transition: "background-color 0.3s ease",
+                  "&:hover": {
+                    backgroundColor: "#303f9f",
+                  },
+                }}
+              >
+                {loading
+                  ? "Loading..."
+                  : type === "sign-in"
+                  ? "Sign In"
+                  : "Sign Up"}
+              </Button>
+
+              <div className="mt-4 text-center">
+                <Typography variant="body2">
+                  {type === "sign-in"
+                    ? "Don't have an account?"
+                    : "Already have an account?"}{" "}
+                  <Link
+                    to={type === "sign-in" ? "/sign-up" : "/sign-in"}
+                    className="text-blue-500 underline"
+                  >
+                    {type === "sign-in" ? "Sign Up" : "Sign In"}
+                  </Link>
+                </Typography>
+              </div>
+            </form>
+          </motion.section>
+        </div>
+      </div>
+      <Toaster />
+    </AnimationWrapper>
   );
 }

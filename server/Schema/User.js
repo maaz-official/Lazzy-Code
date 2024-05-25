@@ -6,7 +6,7 @@ let profile_imgs_collections_list = ["notionists-neutral", "adventurer-neutral",
 const userSchema = mongoose.Schema({
 
     personal_info: {
-        fullname: {
+        username: {
             type: String,
             lowercase: true,
             required: true,
@@ -90,4 +90,5 @@ const userSchema = mongoose.Schema({
 
 })
 
-export default mongoose.model("users", userSchema);
+export default mongoose.model("User", userSchema);
+
