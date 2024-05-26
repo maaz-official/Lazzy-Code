@@ -1,44 +1,34 @@
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import { useEffect, createContext, useState } from "react";
 import HomePage from "./pages/home.page.jsx";
 import UserAuthFormPage from "./pages/userAuthForm.page.jsx";
 import { ThemeProvider } from "./themecontext.jsx";
 import NavBar from "./components/navbar.component";
+import { lookInSession, storeSession, logOutUser } from "./common/session.jsx";
 
-export const UserAuthContext = createContext({});
+export const UserContext = createContext({});
 
 const App = () => {
-  const [userAuth, setUserAuth] = useState();
+  const [userAuth, setUserAuth] = useState({ access_token: null });
 
   useEffect(() => {
-    let userInSession = lookInSession('user');
-    userInSession ? setUserAuth(JSON.parse(userInSession)) : setUserAuth({
-      access_token: null
-    });
+    const userInSession = lookInSession('user');
+    if (userInSession) {
+      setUserAuth(JSON.parse(userInSession));
+    }
   }, []);
-
-  const lookInSession = (key) => {
-    return sessionStorage.getItem(key);
-  };
 
   return (
     <ThemeProvider>
       <Router>
-        <UserAuthContext.Provider value={{ userAuth, setUserAuth }}>
+        <UserContext.Provider value={{ userAuth, setUserAuth }}>
+          <NavBar />
           <Routes>
-            <Route element={<NavBar />}>
-              <Route path="/" element={<HomePage />} />
-            </Route>
-            <Route
-              path="/sign-in"
-              element={<UserAuthFormPage type="sign-in" />}
-            />
-            <Route
-              path="/sign-up"
-              element={<UserAuthFormPage type="sign-up" />}
-            />
+            <Route path="/" element={userAuth.access_token ? <HomePage /> : <Navigate to="/sign-in" />} />
+            <Route path="/sign-in" element={<UserAuthFormPage type="sign-in" />} />
+            <Route path="/sign-up" element={<UserAuthFormPage type="sign-up" />} />
           </Routes>
-        </UserAuthContext.Provider>
+        </UserContext.Provider>
       </Router>
     </ThemeProvider>
   );

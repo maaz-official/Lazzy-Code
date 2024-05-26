@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState, useContext } from "react";
-import { Link, useNavigate, Navigate } from "react-router-dom"; // Ensure Navigate is imported
+import { Link, useNavigate, Navigate } from "react-router-dom";
 import { Box, Button, Typography } from "@mui/material";
 import InputBox from "../components/input.component";
-import "./styles/background-animation.css"; // Ensure this CSS file exists
+import "./styles/background-animation.css";
 import { useTheme } from "../themecontext";
 import { MoonIcon, SunIcon } from "@heroicons/react/solid";
 import AnimationWrapper from "../components/page-animation";
 import { motion } from "framer-motion";
 import { toast, Toaster } from "react-hot-toast";
 import api from "../api/api.js";
-import { UserAuthContext } from "../App"; // Import UserAuthContext
+import { UserContext } from "../App"; // Correct context import
 
 export default function UserAuthForm({ type }) {
   const [formData, setFormData] = useState({
@@ -20,8 +20,8 @@ export default function UserAuthForm({ type }) {
   const [loading, setLoading] = useState(false);
 
   const { theme, toggleTheme } = useTheme();
-  const { userAuth, setUserAuth } = useContext(UserAuthContext); // Get userAuth and setUserAuth from context
-  const navigate = useNavigate(); // Use useNavigate for navigation
+  const { userAuth, setUserAuth } = useContext(UserContext); // Correct context usage
+  const navigate = useNavigate();
 
   const toggleMode = () => {
     toggleTheme();
@@ -86,17 +86,15 @@ export default function UserAuthForm({ type }) {
       const { token, user } = response.data;
 
       sessionStorage.setItem("token", token);
-      setUserAuth({ access_token: token, user }); // Set userAuth context with token and user
+      setUserAuth({ access_token: token, user });
       setLoading(false);
 
-      // Display success message
       toast.success(
         type === "sign-in"
           ? "Sign-in successful!"
           : "User registered successfully!"
       );
 
-      // Redirect to home page upon successful sign-in
       if (type === "sign-in") {
         navigate("/");
       }
